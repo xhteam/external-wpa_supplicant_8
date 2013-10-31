@@ -794,6 +794,96 @@ static int hostapd_ctrl_iface_disable(struct hostapd_iface *iface)
 	return 0;
 }
 
+extern int wpa_debug_level;
+extern int wpa_debug_timestamp;
+
+static const char * debug_level_str(int level)
+{
+	switch (level) {
+		case MSG_EXCESSIVE:
+			return "EXCESSIVE";
+		case MSG_MSGDUMP:
+			return "MSGDUMP";
+		case MSG_DEBUG:
+			return "DEBUG";
+		case MSG_INFO:
+			return "INFO";
+		case MSG_WARNING:
+			return "WARNING";
+		case MSG_ERROR:
+			return "ERROR";
+		default:
+			return "?";
+	}
+}
+
+static int str_to_debug_level(const char *s)
+{
+	if (os_strcasecmp(s, "EXCESSIVE") == 0)
+		return MSG_EXCESSIVE;
+	if (os_strcasecmp(s, "MSGDUMP") == 0)
+		return MSG_MSGDUMP;
+	if (os_strcasecmp(s, "DEBUG") == 0)
+		return MSG_DEBUG;
+	if (os_strcasecmp(s, "INFO") == 0)
+		return MSG_INFO;
+	if (os_strcasecmp(s, "WARNING") == 0)
+		return MSG_WARNING;
+	if (os_strcasecmp(s, "ERROR") == 0)
+		return MSG_ERROR;
+	return -1;
+}
+
+static int hostapd_ctrl_iface_log_level(struct hostapd_data *hapd,
+		char *cmd, char *buf,
+		size_t buflen)
+{
+	char *pos, *end, *stamp;
+	int ret;
+
+	if (cmd == NULL) {
+		return -1;
+	}
+
+	/* cmd: "LOG_LEVEL [<level>]" */
+	if (*cmd == '\0') {
+		pos = buf;
+		end = buf + buflen;
+		ret = os_snprintf(pos, end - pos, "Current level: %s\n"
+				"Timestamp: %d\n",
+				debug_level_str(wpa_debug_level),
+				wpa_debug_timestamp);
+		if (ret < 0 || ret >= end - pos)
+			ret = 0;
+
+		return ret;
+	}
+
+	while (*cmd == ' ')
+		cmd++;
+
+	stamp = os_strchr(cmd, ' ');
+	if (stamp) {
+		*stamp++ = '\0';
+		while (*stamp == ' ') {
+			stamp++;
+		}
+	}
+
+	if (cmd && os_strlen(cmd)) {
+		int level = str_to_debug_level(cmd);
+		if (level < 0)
+			return -1;
+		wpa_debug_level = level;
+	}
+
+	if (stamp && os_strlen(stamp))
+		wpa_debug_timestamp = atoi(stamp);
+
+	os_memcpy(buf, "OK\n", 3);
+	return 3;
+}
+
 
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
@@ -956,6 +1046,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "DISABLE", 7) == 0) {
 		if (hostapd_ctrl_iface_disable(hapd->iface))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "LOG_LEVEL", 9) == 0) {
+		reply_len = hostapd_ctrl_iface_log_level(
+			hapd, buf + 9, reply, reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

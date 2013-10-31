@@ -88,6 +88,7 @@ static const char *commands_help =
 "   interface [ifname]   show interfaces/select interface\n"
 "   level <debug level>  change debug level\n"
 "   license              show full hostapd_cli license\n"
+"   log_level            set the log level of hostapd\n"
 "   quit                 exit hostapd_cli\n";
 
 static struct wpa_ctrl *ctrl_conn;
@@ -205,6 +206,28 @@ static inline int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
 	return _wpa_ctrl_command(ctrl, cmd, 1);
 }
 
+static int hostapd_cli_cmd_log_level(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256], *pos, *end;
+	int i, ret;
+	end = cmd + sizeof(cmd);
+	pos = cmd;
+	ret = os_snprintf(pos, end - pos, "LOG_LEVEL");
+	if (ret < 0 || ret >= end - pos) {
+		printf("Too long LOG_LEVEL command.\n");
+		return -1;
+	}
+	pos += ret;
+	for (i = 0; i < argc; i++) {
+		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
+		if (ret < 0 || ret >= end - pos) {
+			printf("Too long LOG_LEVEL command.\n");
+			return -1;
+		}
+		pos += ret;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
 
 static int hostapd_cli_cmd_ping(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
@@ -829,6 +852,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "quit", hostapd_cli_cmd_quit },
 	{ "set", hostapd_cli_cmd_set },
 	{ "get", hostapd_cli_cmd_get },
+	{ "log_level", hostapd_cli_cmd_log_level },
 	{ NULL, NULL }
 };
 
