@@ -39,7 +39,7 @@ endif
 
 # Use Android specific directory for control interface sockets
 L_CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
-L_CFLAGS += -DCONFIG_CTRL_IFACE_DIR=\"/data/misc/wifi/hostapd\"
+L_CFLAGS += -DCONFIG_CTRL_IFACE_DIR=\"/data/system/hostapd\"
 
 # To force sizeof(enum) = 4
 ifeq ($(TARGET_ARCH),arm)
